@@ -1,204 +1,186 @@
-#
-# This is the server logic of a Shiny web application. You can run the
-# application by clicking 'Run App' above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
-###############################Install Related Packages #######################
-if (!require("shiny")) {
-    install.packages("shiny")
-    library(shiny)
-}
-if (!require("leaflet")) {
-    install.packages("leaflet")
-    library(leaflet)
-}
-if (!require("leaflet.extras")) {
-    install.packages("leaflet.extras")
-    library(leaflet.extras)
-}
-if (!require("dplyr")) {
-    install.packages("dplyr")
-    library(dplyr)
-}
-if (!require("magrittr")) {
-    install.packages("magrittr")
-    library(magrittr)
-}
-if (!require("mapview")) {
-    install.packages("mapview")
-    library(mapview)
-}
-if (!require("leafsync")) {
-    install.packages("leafsync")
-    library(leafsync)
-}
+library(shiny)
+library(usmap)
+library(ggplot2)
+library(readxl)
+library(zipcodeR)
+library(dplyr)
+library(leaflet)
+library(readr) 
 
-#Data Processing
-total_citi_bike_df = read.csv('../data/citibike_data.csv')
-##compute the daily in and out difference for the station
-total_citi_bike_df$day_diff = total_citi_bike_df$endcount - total_citi_bike_df$startcount
-#assign each column to weekend or weekday
-total_citi_bike_df$weekend_or_weekday = ifelse(total_citi_bike_df$weekday %in% c('Saturday','Sunday'), "Weekend", "Weekday")
+server <- function(input, output, session) {
+  
+  
 
-#station info
-citi_bike_station_info <- total_citi_bike_df[,c('station_id','station_name','station_longitude','station_latitude')]
-#remove the duplicates based on station id 
-citi_bike_station_info <- citi_bike_station_info[!duplicated(citi_bike_station_info[ , c("station_id")]),]
-
-#split the bike data to pre-covid and covid time period
-citi_bike_pre_covid_df = total_citi_bike_df[difftime(total_citi_bike_df$date,"2019-05-31")<=0,] #2019-05-01 ~ 2019-05-31
-citi_bike_covid_df = total_citi_bike_df[difftime(total_citi_bike_df$date,"2020-04-30")>=0,] #2020-05-01 ~ 2021-05-31
-
-
-# Define server logic required to draw a histogram
-shinyServer(function(input, output) {
-
-    ## Map Tab section
+  
+  # Load datasets for the Stacked Bar Chart app
+  data <- read.csv("../data/df_combined.csv")
+  
+  # Update choices for selectInput dynamically
+  updateSelectInput(session, "xaxis", choices = names(data)[-1])
+  updateSelectInput(session, "fill", choices = names(data)[-1])
+  updateSelectInput(session, "yearChart", choices = unique(data$year), selected = max(data$year))
+  
+  # Server logic for Stacked Bar Chart
+  output$stackedBarChart <- renderPlot({
+    filteredData <- subset(data, year == input$yearChart)
     
-    output$left_map <- renderLeaflet({
+    ggplot(filteredData, aes_string(x = input$xaxis, fill = input$fill)) +
+      geom_bar(position = "stack", stat = "count") +
+      labs(title = paste("Distribution of", input$fill, "within", input$xaxis, "for year", input$yearChart),
+           x = input$xaxis, y = "Count") +
+      theme_minimal()
+  })
+  
+  # Load datasets for the Disaster Data app
+  data2021 <- read.csv("../data/aggregated_2021.csv")
+  data2022 <- read.csv("../data/aggregated_2022.csv")
+  data2023 <- read.csv("../data/aggregated_2023.csv")
+  
+  # Reactive expression for Disaster Data
+  data_selected <- reactive({
+    switch(input$yearMap,
+           "2021" = data2021,
+           "2022" = data2022,
+           "2023" = data2023)
+  })
+  
+
+  output$map <- renderLeaflet({
+    leaflet(data_selected()) %>% 
+      addTiles() %>%
+      addCircleMarkers(lng = ~longitude, lat = ~latitude, popup = ~full_state_name, radius = 5, group = ~full_state_name)
+  })
+  cf2023 <- read.csv("../data/FEMA2023wildfire.csv")
+  eq2023 <- read.csv("../data/FEMA2023earthquake.csv")
+  hur2023 <- read.csv("../data/FEMA2023hurricane.csv")
+  radio2023 <- read.csv("../data/FEMA2023radiological.csv")
+  river2023 <- read.csv("../data/FEMA2023riverflooding.csv")
+  wf2023 <- read.csv("../data/FEMA2023wildfire.csv")
+  
+  data2023_dis <- reactive({
+    switch(input$dis,
+           "Coastal Flood" = cf2023,
+           "Earthquake" = eq2023,
+           "Hurricane" = hur2023,
+           "Radiological Emergency" = radio2023,
+           "Riverine Flooding" = river2023,
+           "Wildfire" = wf2023)
+  })
+  
+
+  color2023 <- reactive({
+    switch(input$dis,
+           "Coastal Flood" = "blue",
+           "Earthquake" = "brown",
+           "Hurricane" = "grey2",
+           "Radiological Emergency" = "springgreen",
+           "Riverine Flooding" = "cornflowerblue",
+           "Wildfire" = "orange")
+  })
+  
+
+  output$prepplot <- renderPlot({
+    req(data2023_dis()) 
+    ggplot(data = data2023_dis(), aes(x = Influencer)) +
+      geom_bar(fill = color2023()) +
+      labs(x = "Preparedness")
+  })
+  
+  output$plot <- renderPlot({
+    if (input$year == "2021") {
+      data_2021 <- read_excel("../data/FNHS2021.xlsx",sheet = '2021 NHS General Data',skip=1)
+      data_2021 = data_2021[data_2021$QNSD12_1 == 'New York',]
+      data_2021 = data_2021[,c('County','GENEXP1')]
+      
+      result_2021 <- data_2021 %>%
+        group_by(County) %>%
+        summarize(Yes_Proportion = mean(GENEXP1 == "Yes"))
+      
+      result_2021 <- result_2021 %>%
+        mutate(county = paste(County, "County"))
+      
+      result_2021 <- merge(result_2021, countypov, by = "county")
+      
+      
+      plot_usmap(data = result_2021, values = "Yes_Proportion", include = c("NY"), color = "blue") + 
+        scale_fill_continuous(low = "white", high = "blue", name = "Percentage Estimates", label = scales::comma) + 
+        labs(title = "New York Region", subtitle = "Percentage Estimates for New York Counties ever experienced the impacts of a disaster in 2021") +
+        theme(legend.position = "right")
+    } else if (input$year == "2022") {
+      data_2022 <- read_excel("../data/FNHS2022.xlsx",sheet = '2022 NHS General Data',skip=1)
+      data_2022 = data_2022[data_2022$QNSD12_1 == 'New York',]
+      data_2022 = data_2022[,c('County','GENEXP1')]
+      
+      result_2022 <- data_2022 %>%
+        group_by(County) %>%
+        summarize(Yes_Proportion = mean(GENEXP1 == "Yes"))
+      
+      result_2022 <- result_2022 %>%
+        mutate(county = paste(County, "County"))
+      
+      result_2022 <- merge(result_2022, countypov, by = "county")
+      
+      
+      plot_usmap(data = result_2022, values = "Yes_Proportion", include = c("NY"), color = "blue") + 
+        scale_fill_continuous(low = "white", high = "blue", name = "Poverty Percentage Estimates", label = scales::comma) + 
+        labs(title = "New York Region", subtitle = "PPercentage Estimates for New York Counties ever experienced the impacts of a disaster in 2022") +
+        theme(legend.position = "right")
+    } else if (input$year == "2023") {
+      data_2023 <- read_excel("../data/FNHS2023.xlsx",sheet = 'Core Survey',skip=1)
+      data_2023 = data_2023[data_2023$state == 'New York',]
+      data_2023 = data_2023[,c('county','dis_exp')]
+      
+      result_2023 <- data_2023 %>%
+        group_by(county) %>%
+        summarize(Yes_Proportion = mean(dis_exp == "Yes"))
+      
+      result_2023 <- result_2023 %>%
+        mutate(county = paste(county, "County"))
+      
+      result_2023 <- merge(result_2023, countypov, by = "county")
+      
+      
+      plot_usmap(data = result_2023, values = "Yes_Proportion", include = c("NY"), color = "blue") + 
+        scale_fill_continuous(low = "white", high = "blue", name = "Poverty Percentage Estimates", label = scales::comma) + 
+        labs(title = "New York Region", subtitle = "Percentage Estimates for New York Counties ever experienced the impacts of a disaster in 2023") +
+        theme(legend.position = "right")
+    }
+  })
+  
+  
+
+  
+
+  
+  observeEvent(input$map_marker_click, {
+    click <- input$map_marker_click
+    stateName <- click$group
+    stateData <- data_selected() %>% filter(full_state_name == stateName)
     
-    #adjust for weekday/weekend effect
-    if (input$adjust_time =='Overall') {
-        leaflet_plt_df <- citi_bike_pre_covid_df %>% 
-                            group_by(station_id) %>%
-                            summarise(total_start_count = sum(startcount),
-                                      total_end_count = sum(endcount),
-                                      total_day_diff = sum(day_diff),
-                                      total_diff_percentage = sum(day_diff)/sum(startcount),
-                            ) %>% left_join(citi_bike_station_info,by='station_id')
+    if(nrow(stateData) > 0) {
+
+      library(reshape2)
+      stateDataLong <- melt(stateData, id.vars = "full_state_name", measure.vars = c("Flood", "Earthquake", "Wild_Fire", "Hurricane", "Radiological_Attack"), variable.name = "disaster_type", value.name = "count")
+      
+      output$barPlot <- renderPlot({
+        ggplot(stateDataLong, aes(x = disaster_type, y = count)) +
+          geom_bar(stat = "identity", fill = "steelblue") +
+          theme_minimal() +
+          xlab("Disaster Type") +
+          ylab("Count") +
+          ggtitle(paste("Disaster Data for", stateName, "in", input$yearMap)) +
+          geom_text(aes(label = count), vjust = -0.3, size = 3.5)
+      })
     } else {
-        leaflet_plt_df <- citi_bike_pre_covid_df %>% 
-                            filter(weekend_or_weekday == input$adjust_time) %>%
-                            group_by(station_id) %>%
-                                summarise(total_start_count = sum(startcount),
-                                          total_end_count = sum(endcount),
-                                          total_day_diff = sum(day_diff),
-                                          total_diff_percentage = sum(day_diff)/sum(startcount),
-                                ) %>% left_join(citi_bike_station_info,by='station_id')
-                            } 
-
-        
-    map_2019 <- leaflet_plt_df %>%
-         leaflet(options = leafletOptions(minZoom = 11, maxZoom = 13)) %>%
-         addTiles() %>%
-         addProviderTiles("CartoDB.Positron",
-                          options = providerTileOptions(noWrap = TRUE)) %>%
-         setView(-73.9834,40.7504,zoom = 12)
-     
-     if (input$adjust_score == 'start_cnt') {
-         map_2019 %>%
-             addHeatmap(
-                        lng=~station_longitude,
-                        lat=~station_latitude,
-                        intensity=~total_start_count,
-                        max=4000,
-                        radius=8,
-                        blur=10)
-     }else if (input$adjust_score == 'end_cnt') {
-         map_2019 %>%
-             addHeatmap(
-                        lng=~station_longitude,
-                        lat=~station_latitude,
-                        intensity=~total_end_count,
-                        max=4000,
-                        radius=8,
-                        blur=10)
-     } else if (input$adjust_score == 'day_diff_absolute'){
-         map_2019 %>%
-             addHeatmap(
-                        lng=~station_longitude,
-                        lat=~station_latitude,
-                        intensity=~total_day_diff,
-                        max=50,
-                        radius=8,
-                        blur=10)
-         
-     }else if (input$adjust_score == 'day_diff_percentage'){
-         map_2019 %>%
-             addHeatmap(
-                        lng=~station_longitude,
-                        lat=~station_latitude,
-                        intensity=~total_diff_percentage,#change to total day diff percentage
-                        max=0.1,
-                        radius=8,
-                        blur=10)
-         
-     }
-     }) #left map plot
-    
-    output$right_map <- renderLeaflet({
-        #adjust for weekday/weekend effect
-        if (input$adjust_time =='Overall') {
-            leaflet_plt_df <- citi_bike_covid_df %>% 
-                group_by(station_id) %>%
-                summarise(total_start_count = sum(startcount),
-                          total_end_count = sum(endcount),
-                          total_day_diff = sum(day_diff),
-                          total_diff_percentage = sum(day_diff)/sum(startcount),
-                ) %>% left_join(citi_bike_station_info,by='station_id')
-        } else {
-            leaflet_plt_df <- citi_bike_covid_df %>% 
-                filter(weekend_or_weekday == input$adjust_time) %>%
-                group_by(station_id) %>%
-                summarise(total_start_count = sum(startcount),
-                          total_end_count = sum(endcount),
-                          total_day_diff = sum(day_diff),
-                          total_diff_percentage = sum(day_diff)/sum(startcount),
-                ) %>% left_join(citi_bike_station_info,by='station_id')
-        } 
-        #initial the map to plot on
-        map_2020 <- leaflet_plt_df %>%
-            leaflet(options = leafletOptions(minZoom = 11, maxZoom = 13)) %>%
-            addTiles() %>%
-            addProviderTiles("CartoDB.Positron",
-                             options = providerTileOptions(noWrap = TRUE)) %>%
-            setView(-73.9834,40.7504,zoom = 12) 
-        
-        if (input$adjust_score == 'start_cnt') {
-            map_2020 %>%
-                addHeatmap(
-                           lng=~station_longitude,
-                           lat=~station_latitude,
-                            intensity=~total_start_count, #change to total start count
-                            max=4000,
-                            radius=8,
-                           blur=10)
-        }else if (input$adjust_score == 'end_cnt') {
-            map_2020 %>%
-                addHeatmap(
-                           lng=~station_longitude,
-                           lat=~station_latitude,
-                           intensity=~total_end_count,#change to total end count
-                           max=4000,
-                           radius=8,
-                           blur=10)
-        } else if (input$adjust_score == 'day_diff_absolute'){
-            map_2020 %>%
-                addHeatmap(
-                           lng=~station_longitude,
-                           lat=~station_latitude,
-                           intensity=~total_day_diff,#change to total day diff
-                           max=50,
-                           radius=8,
-                           blur=10)
-            
-        }else if (input$adjust_score == 'day_diff_percentage'){
-            map_2020 %>%
-                addHeatmap(
-                           lng=~station_longitude,
-                           lat=~station_latitude,
-                           intensity=~total_diff_percentage,#change to total day diff percentage
-                           max=0.1,
-                           radius=8,
-                           blur=10)
-            
-        }
-        
-    }) #right map plot
-
-})
-
+      output$barPlot <- renderPlot({
+        ggplot() +
+          geom_blank() +
+          ggtitle(paste("No data available for", stateName, "in", input$yearMap))
+      })
+    }
+  })
+  
+  
+  
+}
 
