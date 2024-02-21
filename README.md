@@ -13,7 +13,7 @@ The **learning goals** for this project is:
 The primary objective of this project is to develop a comprehensive understanding of the multifaceted relationship between socio-economic and demographic factors and the impact of disasters on individuals from 2021 to 2023. Through the development and utilization of a Shiny application, the project aims to equip users with the tools necessary to explore and analyze patterns, correlations, and trends in disaster impact within various communities. This exploration is guided by interactive visualizations and data analysis tools that leverage national survey data and demographic information. The project seeks to foster a deeper insight into how different populations are affected by disasters and to enhance preparedness and awareness strategies through data-driven insights.
 
 
-## Project Title Lorem ipsum dolor sit amet
+## Project Title:Exploring the Impact of Disasters on Socio-Economic and Demographic Factors: Shiny App Visualization
 Term: Spring 2024
 ##Shiny App link:https://yj2782.shinyapps.io/Shiny_App_Group_10/
 + Group 10
