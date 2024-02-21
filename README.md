@@ -20,7 +20,7 @@ The **learning goals** for this project is:
 
 ## Project Title Lorem ipsum dolor sit amet
 Term: Spring 2024
-
+Shiny App link:https://yj2782.shinyapps.io/Shiny_App_Group_10/
 + Group 10
 + **Projec title**: 
 	+ Aojie Li
