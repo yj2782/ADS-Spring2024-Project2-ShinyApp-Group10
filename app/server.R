@@ -10,10 +10,10 @@ library(readr)
 server <- function(input, output, session) {
   
   
-
+  
   
   # Load datasets for the Stacked Bar Chart app
-  data <- read.csv("../data/df_combined.csv")
+  data <- read.csv("df_combined.csv")
   
   # Update choices for selectInput dynamically
   updateSelectInput(session, "xaxis", choices = names(data)[-1])
@@ -32,9 +32,9 @@ server <- function(input, output, session) {
   })
   
   # Load datasets for the Disaster Data app
-  data2021 <- read.csv("../data/aggregated_2021.csv")
-  data2022 <- read.csv("../data/aggregated_2022.csv")
-  data2023 <- read.csv("../data/aggregated_2023.csv")
+  data2021 <- read.csv("aggregated_2021.csv")
+  data2022 <- read.csv("aggregated_2022.csv")
+  data2023 <- read.csv("aggregated_2023.csv")
   
   # Reactive expression for Disaster Data
   data_selected <- reactive({
@@ -44,51 +44,56 @@ server <- function(input, output, session) {
            "2023" = data2023)
   })
   
-
+  
   output$map <- renderLeaflet({
     leaflet(data_selected()) %>% 
       addTiles() %>%
       addCircleMarkers(lng = ~longitude, lat = ~latitude, popup = ~full_state_name, radius = 5, group = ~full_state_name)
   })
-  cf2023 <- read.csv("../data/FEMA2023wildfire.csv")
-  eq2023 <- read.csv("../data/FEMA2023earthquake.csv")
-  hur2023 <- read.csv("../data/FEMA2023hurricane.csv")
-  radio2023 <- read.csv("../data/FEMA2023radiological.csv")
-  river2023 <- read.csv("../data/FEMA2023riverflooding.csv")
-  wf2023 <- read.csv("../data/FEMA2023wildfire.csv")
+
+  CF <- read_csv("CF.csv")
+  ERQK <- read_csv("ERQK.csv")
+  HURR <- read_csv("HURR.csv")
+  RADIO <- read_csv("RADIO.csv")
+  RIVER <- read_csv("RIVER.csv")
+  FIRE <- read_csv("FIRE.csv")
   
-  data2023_dis <- reactive({
+  
+  CF$Criteria <- factor(CF$Criteria, levels = c("One", "Two", "Three", "Four"), 
+                        labels = c("One", "Two", "Three", "Four"))
+  ERQK$Criteria <- factor(ERQK$Criteria, levels = c("One", "Two", "Three", "Four"), 
+                          labels = c("One", "Two", "Three", "Four"))
+  HURR$Criteria <- factor(HURR$Criteria, levels = c("One", "Two", "Three", "Four"), 
+                          labels = c("One", "Two", "Three", "Four"))
+  RADIO$Criteria <- factor(RADIO$Criteria, levels = c("One", "Two", "Three", "Four"), 
+                           labels = c("One", "Two", "Three", "Four"))
+  RIVER$Criteria <- factor(RIVER$Criteria, levels = c("One", "Two", "Three", "Four"), 
+                           labels = c("One", "Two", "Three", "Four"))
+  FIRE$Criteria <- factor(FIRE$Criteria, levels = c("One", "Two", "Three", "Four"), 
+                          labels = c("One", "Two", "Three", "Four"))  
+  data20231 <- reactive({
     switch(input$dis,
-           "Coastal Flood" = cf2023,
-           "Earthquake" = eq2023,
-           "Hurricane" = hur2023,
-           "Radiological Emergency" = radio2023,
-           "Riverine Flooding" = river2023,
-           "Wildfire" = wf2023)
+           "Coastal Flood" = CF, 
+           "Earthquake" = ERQK, 
+           "Hurricane" = HURR, 
+           "Radiological Emergency" = RADIO,
+           "Riverine Flooding" = RIVER, 
+           "Wildfire" = FIRE)
   })
   
-
-  color2023 <- reactive({
-    switch(input$dis,
-           "Coastal Flood" = "blue",
-           "Earthquake" = "brown",
-           "Hurricane" = "grey2",
-           "Radiological Emergency" = "springgreen",
-           "Riverine Flooding" = "cornflowerblue",
-           "Wildfire" = "orange")
-  })
   
-
   output$prepplot <- renderPlot({
-    req(data2023_dis()) 
-    ggplot(data = data2023_dis(), aes(x = Influencer)) +
-      geom_bar(fill = color2023()) +
-      labs(x = "Preparedness")
+    ggplot(data = data20231(), aes(x = Criteria, fill = Response)) +
+      geom_bar() +
+      labs(x = "Number of Preparedness Criteria Met")
+    
   })
   
+  
+
   output$plot <- renderPlot({
     if (input$year == "2021") {
-      data_2021 <- read_excel("../data/FNHS2021.xlsx",sheet = '2021 NHS General Data',skip=1)
+      data_2021 <- read_excel("FNHS2021.xlsx",sheet = '2021 NHS General Data',skip=1)
       data_2021 = data_2021[data_2021$QNSD12_1 == 'New York',]
       data_2021 = data_2021[,c('County','GENEXP1')]
       
@@ -107,7 +112,7 @@ server <- function(input, output, session) {
         labs(title = "New York Region", subtitle = "Percentage Estimates for New York Counties ever experienced the impacts of a disaster in 2021") +
         theme(legend.position = "right")
     } else if (input$year == "2022") {
-      data_2022 <- read_excel("../data/FNHS2022.xlsx",sheet = '2022 NHS General Data',skip=1)
+      data_2022 <- read_excel("FNHS2022.xlsx",sheet = '2022 NHS General Data',skip=1)
       data_2022 = data_2022[data_2022$QNSD12_1 == 'New York',]
       data_2022 = data_2022[,c('County','GENEXP1')]
       
@@ -126,7 +131,7 @@ server <- function(input, output, session) {
         labs(title = "New York Region", subtitle = "PPercentage Estimates for New York Counties ever experienced the impacts of a disaster in 2022") +
         theme(legend.position = "right")
     } else if (input$year == "2023") {
-      data_2023 <- read_excel("../data/FNHS2023.xlsx",sheet = 'Core Survey',skip=1)
+      data_2023 <- read_excel("FNHS2023.xlsx",sheet = 'Core Survey',skip=1)
       data_2023 = data_2023[data_2023$state == 'New York',]
       data_2023 = data_2023[,c('county','dis_exp')]
       
@@ -148,9 +153,9 @@ server <- function(input, output, session) {
   })
   
   
-
   
-
+  
+  
   
   observeEvent(input$map_marker_click, {
     click <- input$map_marker_click
@@ -158,7 +163,7 @@ server <- function(input, output, session) {
     stateData <- data_selected() %>% filter(full_state_name == stateName)
     
     if(nrow(stateData) > 0) {
-
+      
       library(reshape2)
       stateDataLong <- melt(stateData, id.vars = "full_state_name", measure.vars = c("Flood", "Earthquake", "Wild_Fire", "Hurricane", "Radiological_Attack"), variable.name = "disaster_type", value.name = "count")
       
