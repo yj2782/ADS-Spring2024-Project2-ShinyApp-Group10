@@ -10,12 +10,7 @@ In this second project of GR5243 Applied Data Science, we develop a *Exploratory
 
 The **learning goals** for this project is:
 
-- business intelligence for data science
-- data cleaning
-- data visualization
-- systems development/design life cycle
-- shiny app/shiny server
-
+The primary objective of this project is to develop a comprehensive understanding of the multifaceted relationship between socio-economic and demographic factors and the impact of disasters on individuals from 2021 to 2023. Through the development and utilization of a Shiny application, the project aims to equip users with the tools necessary to explore and analyze patterns, correlations, and trends in disaster impact within various communities. This exploration is guided by interactive visualizations and data analysis tools that leverage national survey data and demographic information. The project seeks to foster a deeper insight into how different populations are affected by disasters and to enhance preparedness and awareness strategies through data-driven insights.
 *The above general statement about project 2 can be removed once you are finished with your project. It is optional.
 
 ## Project Title Lorem ipsum dolor sit amet
@@ -28,7 +23,17 @@ Term: Spring 2024
 	+ Kasey Liang
 	+ Yiwei Jiang
 	
-+ **Project summary**: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
++ **Project summary**:Our group's Shiny application serves as a dynamic platform designed to explore the interplay between various socio-economic and demographic factors among individuals affected by disasters from 2021 to 2023. The application features a range of interactive tools and visualizations, including:
+
+Stacked Bar Chart: This visualization allows users to select from five variables (income, age, education, race, and disaster awareness levels) to explore potential correlations and patterns among these factors in the context of disaster impacts.
+
+Choropleth Map: Utilizing FEMA's national household survey data segmented by state, this map provides insights into the occurrence and frequency of disasters such as floods, wildfires, and earthquakes. It enables a comparative analysis of disaster impacts across different states and time periods.
+
+FEMA Disaster Preparedness Summary: A grouped bar plot categorizes levels of disaster preparedness based on awareness, experience, efficacy, and risk preparedness, offering an overview of national preparedness levels as reported in the 2023 FEMA survey.
+
+Percentage Estimate Map for New York City: This detailed map shows the distribution of disaster-affected counties in NYC, visualizing survey data on personal or familial disaster impacts from 2021 to 2023.
+
+The application is designed not only as an educational tool but also as a resource for policymakers, researchers, and the general public to engage with and derive valuable insights into disaster impact dynamics. By providing access to interactive data visualizations and analyses, the project aims to enhance understanding and inform strategies for improved disaster preparedness and response across various demographic and socio-economic groups.
 
 + **Contribution statement**: All team members contributed equally in all stages of this project. All team members approve our work presented in this GitHub repository including this contributions statement. 
 
